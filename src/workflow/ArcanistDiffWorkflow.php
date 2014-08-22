@@ -1284,6 +1284,11 @@ EOTEXT
 
     $repository_api = $this->getRepositoryAPI();
 
+    // We can use unit test engine which relays on scripts in project root.
+    $working_dir = getcwd();
+    $project_root = $this->getWorkingCopy()->getProjectRoot();
+    chdir($project_root);
+
     $this->console->writeOut("Running unit tests...\n");
     try {
       $argv = $this->getPassthruArgumentsAsArgv('unit');
@@ -1342,6 +1347,8 @@ EOTEXT
     } catch (ArcanistNoEffectException $ex) {
       $this->console->writeOut($ex->getMessage()."\n");
     }
+
+    chdir($working_dir);
 
     return null;
   }
