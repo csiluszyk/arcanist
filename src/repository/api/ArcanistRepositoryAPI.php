@@ -4,7 +4,6 @@
  * Interfaces with the VCS in the working copy.
  *
  * @task  status      Path Status
- * @group workingcopy
  */
 abstract class ArcanistRepositoryAPI {
 
@@ -64,7 +63,7 @@ abstract class ArcanistRepositoryAPI {
     if (!$working_copy) {
       throw new Exception(
         pht(
-          "Trying to create a RepositoryAPI without a working copy!"));
+          'Trying to create a RepositoryAPI without a working copy!'));
     }
 
     $root = $working_copy->getProjectRoot();
@@ -81,9 +80,9 @@ abstract class ArcanistRepositoryAPI {
       default:
         throw new Exception(
           pht(
-            "The current working directory is not part of a working copy for ".
-            "a supported version control system (Git, Subversion or ".
-            "Mercurial)."));
+            'The current working directory is not part of a working copy for '.
+            'a supported version control system (Git, Subversion or '.
+            'Mercurial).'));
     }
 
     $api->configurationManager = $configuration_manager;
@@ -187,6 +186,14 @@ abstract class ArcanistRepositoryAPI {
   /**
    * @task status
    */
+  final public function getMissingChanges() {
+    return $this->getUncommittedPathsWithMask(self::FLAG_MISSING);
+  }
+
+
+  /**
+   * @task status
+   */
   private function getUncommittedPathsWithMask($mask) {
     $match = array();
     foreach ($this->getUncommittedStatus() as $path => $flags) {
@@ -219,7 +226,7 @@ abstract class ArcanistRepositoryAPI {
   /**
    * Get a list of paths affected by commits in the current commit range, or
    * uncommitted changes in the working copy. See @{method:getUncommittedStatus}
-   * or @{method:getCommitRangeStatus} to retreive smaller parts of the status.
+   * or @{method:getCommitRangeStatus} to retrieve smaller parts of the status.
    *
    * See @{method:getUncommittedStatus} for a description of the return value.
    *
@@ -322,6 +329,8 @@ abstract class ArcanistRepositoryAPI {
   abstract public function loadWorkingCopyDifferentialRevisions(
     ConduitClient $conduit,
     array $query);
+  abstract public function getRemoteURI();
+
 
   public function getUnderlyingWorkingCopyRevision() {
     return $this->getWorkingCopyRevision();
@@ -565,6 +574,10 @@ abstract class ArcanistRepositoryAPI {
     return $this;
   }
 
+  public function setHeadCommit($symbolic_commit) {
+    throw new ArcanistCapabilityNotSupportedException($this);
+  }
+
   final public function getBaseCommit() {
     if (!$this->supportsCommitRanges()) {
       throw new ArcanistCapabilityNotSupportedException($this);
@@ -576,6 +589,10 @@ abstract class ArcanistRepositoryAPI {
     }
 
     return $this->resolvedBaseCommit;
+  }
+
+  public function getHeadCommit() {
+    throw new ArcanistCapabilityNotSupportedException($this);
   }
 
   final public function reloadCommitRange() {
@@ -633,6 +650,10 @@ abstract class ArcanistRepositoryAPI {
     $commit = $parser->resolveBaseCommit($base_commit_rules);
 
     return $commit;
+  }
+
+  public function getRepositoryUUID() {
+    return null;
   }
 
 }

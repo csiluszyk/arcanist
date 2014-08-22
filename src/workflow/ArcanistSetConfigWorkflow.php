@@ -2,10 +2,8 @@
 
 /**
  * Write configuration settings.
- *
- * @group workflow
  */
-final class ArcanistSetConfigWorkflow extends ArcanistBaseWorkflow {
+final class ArcanistSetConfigWorkflow extends ArcanistWorkflow {
 
   public function getWorkflowName() {
     return 'set-config';
@@ -25,24 +23,18 @@ EOTEXT
 
           Options are either user (apply to all arc commands you invoke
           from the current user) or local (apply only to the current working
-          copy).  By default, user configuration is written.  Use __--local__
+          copy). By default, user configuration is written. Use __--local__
           to write local configuration.
 
           User values are written to '~/.arcrc' on Linux and Mac OS X, and an
-          undisclosed location on Windows.  Local values are written to an arc
+          undisclosed location on Windows. Local values are written to an arc
           directory under either .git, .hg, or .svn as appropriate.
-
-          With __--show__, a description of supported configuration values
-          is shown.
 EOTEXT
       );
   }
 
   public function getArguments() {
     return array(
-      'show' => array(
-        'help' => 'Show available configuration values.',
-      ),
       'local' => array(
         'help' => 'Set a local config value instead of a user one',
       ),
@@ -55,14 +47,10 @@ EOTEXT
   }
 
   public function run() {
-    if ($this->getArgument('show')) {
-      return $this->show();
-    }
-
     $argv = $this->getArgument('argv');
     if (count($argv) != 2) {
       throw new ArcanistUsageException(
-        "Specify a key and a value, or --show.");
+        pht('Specify a key and a value.'));
     }
     $configuration_manager = $this->getConfigurationManager();
 
@@ -119,36 +107,6 @@ EOTEXT
       } else {
         echo "Set key '{$key}' = {$val} in {$which} config (was {$old}).\n";
       }
-    }
-
-    return 0;
-  }
-
-  private function show() {
-    $config = $this->getConfigurationManager()->readUserArcConfig();
-
-    $settings = new ArcanistSettings();
-
-    $keys = $settings->getAllKeys();
-    sort($keys);
-    foreach ($keys as $key) {
-      $type = $settings->getType($key);
-      $example = $settings->getExample($key);
-      $help = $settings->getHelp($key);
-
-      $value = idx($config, $key);
-      $value = $settings->formatConfigValueForDisplay($key, $value);
-
-      echo phutil_console_format("**__%s__** (%s)\n\n", $key, $type);
-      if ($example !== null) {
-        echo phutil_console_format("           Example: %s\n", $example);
-      }
-      if (strlen($value)) {
-        echo phutil_console_format("      User Setting: %s\n", $value);
-      }
-      echo "\n";
-      echo phutil_console_wrap($help, 4);
-      echo "\n\n\n";
     }
 
     return 0;

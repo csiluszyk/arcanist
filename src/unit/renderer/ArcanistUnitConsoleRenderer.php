@@ -1,8 +1,5 @@
 <?php
 
-/**
- * @group unit
- */
 final class ArcanistUnitConsoleRenderer extends ArcanistUnitRenderer {
 
   public function renderUnitResult(ArcanistUnitTestResult $result) {
@@ -12,10 +9,17 @@ final class ArcanistUnitConsoleRenderer extends ArcanistUnitRenderer {
     if ($result_code == ArcanistUnitTestResult::RESULT_PASS) {
       $duration = ' '.$this->formatTestDuration($result->getDuration());
     }
+
+    $test_name = $result->getName();
+    $test_namespace = $result->getNamespace();
+    if (strlen($test_namespace)) {
+      $test_name = $test_namespace.'::'.$test_name;
+    }
+
     $return = sprintf(
       "  %s %s\n",
       $this->getFormattedResult($result->getResult()).$duration,
-      $result->getName());
+      $test_name);
 
     if ($result_code != ArcanistUnitTestResult::RESULT_PASS) {
       $return .= $result->getUserData()."\n";
@@ -50,7 +54,7 @@ final class ArcanistUnitConsoleRenderer extends ArcanistUnitRenderer {
     $star = "\xE2\x98\x85";
     if (phutil_is_windows()) {
       // Fall-back to normal asterisk for Windows consoles.
-      $star = "*";
+      $star = '*';
     }
     $acceptableness = array(
       50   => "<fg:green>%s</fg><fg:yellow>{$star}</fg> ",

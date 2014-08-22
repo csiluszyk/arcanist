@@ -2,8 +2,6 @@
 
 /**
  * Represents the outcome of running a unit test.
- *
- * @group unit
  */
 final class ArcanistUnitTestResult {
 
@@ -22,6 +20,15 @@ final class ArcanistUnitTestResult {
   private $userData;
   private $extraData;
   private $coverage;
+
+  public function setNamespace($namespace) {
+    $this->namespace = $namespace;
+    return $this;
+  }
+
+  public function getNamespace() {
+    return $this->namespace;
+  }
 
   public function setName($name) {
     $this->name = $name;
@@ -69,8 +76,8 @@ final class ArcanistUnitTestResult {
   }
 
   /**
-   * "extra data" allows an implementation to store additional
-   * key/value metadata along with the result of the test run.
+   * "extra data" allows an implementation to store additional key/value
+   * metadata along with the result of the test run.
    */
   public function setExtraData(array $extra_data = null) {
     $this->extraData = $extra_data;

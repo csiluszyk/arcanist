@@ -3,10 +3,7 @@
 /**
  * Interfaces with basic information about the working copy.
  *
- *
  * @task config
- *
- * @group workingcopy
  */
 final class ArcanistWorkingCopyIdentity {
 
@@ -113,8 +110,10 @@ final class ArcanistWorkingCopyIdentity {
 
     $console = PhutilConsole::getConsole();
 
+    $looked_in = array();
     foreach ($config_paths as $config_path) {
       $config_file = $config_path.'/.arcconfig';
+      $looked_in[] = $config_file;
       if (Filesystem::pathExists($config_file)) {
         // We always need to examine the filesystem to look for `.arcconfig`
         // so we can set the project root correctly. We might or might not
@@ -133,7 +132,20 @@ final class ArcanistWorkingCopyIdentity {
     }
 
     if ($config === null) {
-      // We didn't find a ".arcconfig" anywhere, so just use an empty array.
+      if ($looked_in) {
+        $console->writeLog(
+          "%s\n",
+          pht(
+            'Working Copy: Unable to find .arcconfig in any of these '.
+            'locations: %s.',
+            implode(', ', $looked_in)));
+      } else {
+        $console->writeLog(
+          "%s\n",
+          pht(
+            'Working Copy: No candidate locations for .arcconfig from '.
+            'this working directory.'));
+      }
       $config = array();
     }
 
@@ -186,25 +198,13 @@ final class ArcanistWorkingCopyIdentity {
   }
 
   private static function parseRawConfigFile($raw_config, $from_where) {
-    $proj = json_decode($raw_config, true);
-    if (!is_array($proj)) {
-      throw new Exception(
-        "Unable to parse '.arcconfig' file '{$from_where}'. The file contents ".
-        "should be valid JSON.\n\n".
-        "FILE CONTENTS\n".
-        substr($raw_config, 0, 2048));
+    try {
+      return phutil_json_decode($raw_config);
+    } catch (PhutilJSONParserException $ex) {
+      throw new PhutilProxyException(
+        pht("Unable to parse '.arcconfig' file '%s'.", $from_where),
+        $ex);
     }
-    $required_keys = array(
-      'project_id',
-    );
-    foreach ($required_keys as $key) {
-      if (!array_key_exists($key, $proj)) {
-        throw new Exception(
-          "Required key '{$key}' is missing from '.arcconfig' file ".
-          "'{$from_where}'.");
-      }
-    }
-    return $proj;
   }
 
   private function __construct($root, array $config) {
@@ -213,6 +213,12 @@ final class ArcanistWorkingCopyIdentity {
   }
 
   public function getProjectID() {
+    $project_id = $this->getProjectConfig('project.name');
+    if ($project_id) {
+      return $project_id;
+    }
+
+    // This is an older name for the setting.
     return $this->getProjectConfig('project_id');
   }
 
@@ -238,14 +244,6 @@ final class ArcanistWorkingCopyIdentity {
   public function readProjectConfig() {
     return $this->projectConfig;
   }
-
-  /**
-   * Deprecated; use @{method:getProjectConfig}.
-   */
-  public function getConfig($key, $default = null) {
-    return $this->getProjectConfig($key, $default);
-  }
-
 
   /**
    * Read a configuration directive from project configuration. This reads ONLY
@@ -283,59 +281,68 @@ final class ArcanistWorkingCopyIdentity {
   }
 
   /**
-   * Read a configuration directive from local configuration.  This
+   * Read a configuration directive from local configuration. This
    * reads ONLY the per-working copy configuration,
    * i.e. .(git|hg|svn)/arc/config, and not other configuration
-   * sources.  See @{method:getConfigFromAnySource} to read from any
+   * sources. See @{method:getConfigFromAnySource} to read from any
    * config source or @{method:getProjectConfig} to read permanent
    * project-level config.
    *
    * @task config
    */
-  public function getLocalConfig($key, $default=null) {
+  public function getLocalConfig($key, $default = null) {
     return idx($this->localConfig, $key, $default);
   }
 
   public function readLocalArcConfig() {
     if (strlen($this->localMetaDir)) {
-      $local_path = Filesystem::resolvePath(
-        'arc/config',
-        $this->localMetaDir);
+      $local_path = Filesystem::resolvePath('arc/config', $this->localMetaDir);
+
+      $console = PhutilConsole::getConsole();
+
       if (Filesystem::pathExists($local_path)) {
-        $file = Filesystem::readFile($local_path);
-        if ($file) {
-          return json_decode($file, true);
+        $console->writeLog(
+          "%s\n",
+          pht(
+            'Config: Reading local configuration file "%s"...',
+            $local_path));
+
+        try {
+          $json = Filesystem::readFile($local_path);
+          return phutil_json_decode($json);
+        } catch (PhutilJSONParserException $ex) {
+          throw new PhutilProxyException(
+            pht("Failed to parse '%s' as JSON.", $local_path),
+            $ex);
         }
+      } else {
+        $console->writeLog(
+          "%s\n",
+          pht(
+            'Config: Did not find local configuration at "%s".',
+            $local_path));
       }
     }
+
     return array();
   }
 
   public function writeLocalArcConfig(array $config) {
-    $dir = $this->localMetaDir;
-    if (!strlen($dir)) {
-      return false;
-    }
-
-    if (!Filesystem::pathExists($dir)) {
-      try {
-        Filesystem::createDirectory($dir);
-      } catch (Exception $ex) {
-        return false;
-      }
-    }
-
     $json_encoder = new PhutilJSON();
     $json = $json_encoder->encodeFormatted($config);
 
-    $config_file = Filesystem::resolvePath('arc/config', $dir);
-     try {
-      Filesystem::writeFile($config_file, $json);
-    } catch (FilesystemException $ex) {
-      return false;
+    $dir = $this->localMetaDir;
+    if (!strlen($dir)) {
+      throw new Exception(pht('No working copy to write config into!'));
     }
 
-    return true;
+    $local_dir = $dir.DIRECTORY_SEPARATOR.'arc';
+    if (!Filesystem::pathExists($local_dir)) {
+      Filesystem::createDirectory($local_dir, 0755);
+    }
+
+    $config_file = $local_dir.DIRECTORY_SEPARATOR.'config';
+    Filesystem::writeFile($config_file, $json);
   }
 
 }
