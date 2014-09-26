@@ -232,11 +232,7 @@ phutil_register_library_map(array(
     'ArcanistCSSLintLinter' => 'ArcanistExternalLinter',
     'ArcanistCSSLintLinterTestCase' => 'ArcanistArcanistLinterTestCase',
     'ArcanistCSharpLinter' => 'ArcanistLinter',
-<<<<<<< HEAD
-    'ArcanistCallConduitWorkflow' => 'ArcanistBaseWorkflow',
-=======
     'ArcanistCallConduitWorkflow' => 'ArcanistWorkflow',
->>>>>>> ec948a276d86101176a42db4b6d762ffd0773334
     'ArcanistCapabilityNotSupportedException' => 'Exception',
     'ArcanistCheckstyleXMLLintRenderer' => 'ArcanistLintRenderer',
     'ArcanistChmodLinter' => 'ArcanistLinter',
